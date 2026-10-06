@@ -514,12 +514,9 @@ pio run -e lilygo-t-dongle-c5-ble -t upload
 - 🗺️ Submit camera locations to DeFlock
 
 ### Remix Culture
-This project is licensed **CC-BY-SA 4.0**:
-- ✅ Use commercially
-- ✅ Modify and remix
-- ✅ Share freely
-- 📝 Credit original authors
-- 🔄 Share-alike license
+See the [Apache License 2.0](LICENSE) and [attribution notice](NOTICE) for
+the project's licensing terms. Original upstream and third-party material
+retains its applicable license and notices.
 
 ---
 
