@@ -25,6 +25,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <SPIFFS.h>
+#include <Preferences.h>
 #include "esp_log.h"
 #include "fy_detect.h"   // PR#39: detection patterns + pure matching functions
 #include "fy_config.h"   // user configuration blob (web-flasher configurator)
@@ -109,6 +110,11 @@ static bool fyConfigLoad() {
 // M5StickC Plus SE — ST7789v2 1.14" display (240×135 landscape)
 #if defined(USE_M5STICKC_PLUS_SE)
   #include "m5stickc_display.h"
+#endif
+
+// LILYGO T-Display S3 — ST7789 170×320 8-bit parallel display (LovyanGFX)
+#if defined(USE_LILYGO_T_DISPLAY_S3)
+  #include "tdisplays3_display.h"
 #endif
 
 // M5Atom LED support — GPIO27 SK6812, GPIO39 button
@@ -200,6 +206,12 @@ static bool fyConfigLoad() {
   #define USE_LED        0
   #define USE_C5_DISPLAY 1
   #define LED_FLASH_MS   30000  // hold red 30 s after detection
+#elif defined(USE_LILYGO_T_DISPLAY_S3)
+  // LILYGO T-Display S3 — ESP32-S3R8, 170×320 ST7789 via tdisplays3_display.h.
+  // No buzzer/LED; the display is the only output.
+  #define USE_BUZZER     0
+  #define USE_LED        0
+  #define LED_FLASH_MS   0
 #elif defined(USE_M5BASIC)
   // M5Stack Basic Core v2.7 — ILI9342C 320×240 IPS + 1W speaker + 3 buttons
   // Display handled via M5Unified in m5basic_display.h.
@@ -1523,7 +1535,8 @@ static void screenTick() {
   // of calling m5basicScanning()/m5stickcScanning() directly — those touch
   // M5Unified, which only the UI task may access now. Cheap even on boards
   // with no display (Atom/esp32dev) since nothing ever reads it there.
-  uiPublishScan(currentChannel, channelModeName(), fyDetCount, fySpiffsReady);
+  uiPublishScan(currentChannel, channelModeName(), fyDetCount, fySpiffsReady,
+                !sniffingStopped);
 }
 
 // Confidence weights, OUI byte tables, sequential-MAC tracking, and
@@ -1583,6 +1596,23 @@ static const char* alertTypeToMethod(AlertType t) {
   }
 }
 
+// Lifetime count of unique cameras, kept in NVS across reboots and reflashes of the app.
+// Writes are deferred to loop() because fyAddDetection can run in radio callbacks.
+static volatile uint32_t fyTotalPending = 0;
+static uint32_t          fyTotalCameras = 0;
+
+static void fyTotalTick() {
+  uint32_t n = fyTotalPending;
+  if (!n) return;
+  fyTotalPending -= n;
+  fyTotalCameras += n;
+  Preferences p;
+  if (p.begin("flockyou", false)) {
+    p.putUInt("cameras", fyTotalCameras);
+    p.end();
+  }
+}
+
 static int fyAddDetection(const char* mac, const char* method,
                           int8_t rssi, uint8_t ch, const char* ssid,
                           uint8_t confidence, bool* outChirpWorthy) {
@@ -1620,6 +1650,7 @@ static int fyAddDetection(const char* mac, const char* method,
   else                 d.ssid[0] = '\0';
   fyDetCount++;
   fyDirty = true;
+  fyTotalPending++;
   if (outChirpWorthy) *outChirpWorthy = true;
   return fyDetCount - 1;
 }
@@ -2435,6 +2466,10 @@ void setup() {
   c5DisplayInit();
 #endif
 
+#if defined(USE_LILYGO_T_DISPLAY_S3)
+  tds3Init();
+#endif
+
 #if defined(HAS_SIMPLE_BUTTON)
   // Single bare-GPIO button (Atom Lite/Echo/Voice/VoiceS3R, T-Dongle C5).
   // Safe to call even where USE_M5ATOM's block below also sets this pin.
@@ -2643,6 +2678,11 @@ void setup() {
   esp_log_level_set("SPIFFS", ESP_LOG_NONE);
   bool spiffsOk = SPIFFS.begin(true);
   esp_log_level_set("SPIFFS", ESP_LOG_WARN);
+  {
+    Preferences p;
+    if (p.begin("flockyou", true)) { fyTotalCameras = p.getUInt("cameras", 0); p.end(); }
+    dualPrintf("[flockyou] lifetime cameras detected: %u\n", (unsigned)fyTotalCameras);
+  }
   if (spiffsOk) {
     fySpiffsReady = true;
     dualPrintln("[flockyou] SPIFFS ready");
@@ -2773,17 +2813,36 @@ void loop() {
   updateChannelMode();
   drainAlertQueue();
   autosaveTick();
+  fyTotalTick();
   ledTick();
   printHeartbeat();
   screenTick();
 
 #if defined(ENABLE_BLE_SCAN) && ENABLE_BLE_SCAN
-  bleScanTick(fyPromiscPaused);
+  // Skipped while paused so the BLE scan is not restarted behind the user's back.
+  if (!sniffingStopped) bleScanTick(fyPromiscPaused);
 #if defined(BLE_SELF_TEST) && BLE_SELF_TEST
   bleSelfTestTick(g_pBLEAdv);
 #endif
 #endif
 
+
+#if defined(USE_LILYGO_T_DISPLAY_S3)
+  // Buttons are polled on the UI task; action 4 = top button toggles scanning.
+  if (uiTakeButtonAction() == 4) {
+    if (sniffingStopped) {
+      sniffingStopped = false;
+      if (!fyPromiscPaused) esp_wifi_set_promiscuous(true);
+      lastHop = millis();
+      Serial.println("[flockyou] scanning resumed (button)");
+    } else {
+#if defined(ENABLE_BLE_SCAN) && ENABLE_BLE_SCAN
+      if (g_pBLEScan) g_pBLEScan->stop();
+#endif
+      stopSniffing("button");
+    }
+  }
+#endif
 
 #if defined(USE_M5BASIC) || defined(USE_M5STICKC_PLUS_SE)
   // Button presses are now detected on the UI task (ui_task.h) — it is the

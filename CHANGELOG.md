@@ -16,6 +16,21 @@ blocking calls disguised as async). A future reader should be able to tell
 
 ### Added
 
+- **LILYGO T-Display S3 support** (`lilygo-t-display-s3`, `lilygo-t-display-s3-ble`):
+  ESP32-S3R8 with a 170x320 ST7789 on an 8-bit parallel bus, driven by LovyanGFX
+  (`tdisplays3_display.h`). The display is the only output (no buzzer or LED).
+  - Top button (GPIO14) pauses/resumes scanning; the scan screen shows the paused
+    state. While paused, the BLE scan is not restarted.
+  - BOOT (GPIO0) cycles backlight 10/25/50/75/100%. The lowest step is 10%, not
+    0%, so the screen cannot be turned fully dark by accident.
+  - UI task is pinned to core 1; `uiPublishScan()` gained an optional `scanning`
+    flag (default true, so other boards are unaffected).
+  - Both environments use native USB CDC and `--no-stub` uploads.
+- **Lifetime camera count**: a count of unique cameras detected is kept in NVS
+  (namespace `flockyou`, key `cameras`) and printed at boot. It survives reboots
+  and app reflashes but not a full flash erase. Writes are deferred to `loop()`
+  because detections can be added from radio callbacks.
+
 - **Web-flasher configurator** (ADR-0001): before flashing, choose which
   detections this device watches for, which outputs it uses (light, sound,
   vibration — only the ones the selected board actually has), and two bounded

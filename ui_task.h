@@ -57,11 +57,13 @@ struct UiScanSnapshot {
     char    modeName[12];
     int     detCount;
     bool    spiffsOk;
+    bool    scanning;
 };
-static UiScanSnapshot g_uiScan    = { 1, {0}, 0, false };
+static UiScanSnapshot g_uiScan    = { 1, {0}, 0, false, true };
 static portMUX_TYPE   g_uiScanMux = portMUX_INITIALIZER_UNLOCKED;
 
-static void uiPublishScan(uint8_t channel, const char* modeName, int detCount, bool spiffsOk) {
+static void uiPublishScan(uint8_t channel, const char* modeName, int detCount, bool spiffsOk,
+                          bool scanning = true) {
     portENTER_CRITICAL(&g_uiScanMux);
     g_uiScan.channel = channel;
     if (modeName) {
@@ -70,6 +72,7 @@ static void uiPublishScan(uint8_t channel, const char* modeName, int detCount, b
     }
     g_uiScan.detCount = detCount;
     g_uiScan.spiffsOk = spiffsOk;
+    g_uiScan.scanning = scanning;
     portEXIT_CRITICAL(&g_uiScanMux);
 }
 
@@ -309,6 +312,19 @@ static void uiTaskFn(void* pv) {
         }
 #endif
 
+#if defined(USE_LILYGO_T_DISPLAY_S3)
+        if (alertWins) {
+            tds3Detection(alert.method, alert.mac, alert.confidence, alert.rssi,
+                          alert.channel, alert.ssid, alert.dispType);
+        }
+        tds3Scanning(scan.channel, scan.modeName, scan.detCount, now, scan.spiffsOk,
+                     scan.scanning);
+        {
+            int btn = tds3ButtonTick(now);
+            if (btn == 4) uiSetButtonAction((uint8_t)btn);
+        }
+#endif
+
 #if defined(USE_M5BASIC)
         if (alertWins) {
             m5basicDetection(alert.method, alert.mac, alert.confidence, alert.rssi,
@@ -361,7 +377,9 @@ static void uiTaskFn(void* pv) {
 // but this guard keeps an idle polling task from ever being spawned on
 // hardware that has nothing for it to draw.
 static void startUiTask() {
-#if (defined(USE_C5_DISPLAY) && USE_C5_DISPLAY) || defined(USE_M5BASIC) || defined(USE_M5STICKC_PLUS_SE)
+#if defined(USE_LILYGO_T_DISPLAY_S3)
+    xTaskCreatePinnedToCore(uiTaskFn, "flock_ui", 8192, nullptr, 1, &g_uiTaskHandle, 1);
+#elif (defined(USE_C5_DISPLAY) && USE_C5_DISPLAY) || defined(USE_M5BASIC) || defined(USE_M5STICKC_PLUS_SE)
     xTaskCreatePinnedToCore(uiTaskFn, "flock_ui", 4096, nullptr, 1, &g_uiTaskHandle, 1);
 #endif
 }
