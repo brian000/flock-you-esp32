@@ -468,6 +468,7 @@ while true; do
     echo "   7) Core2 For AWS + BLE    — 2.0\" touch + I2S + PSRAM        (CH9102/usbserial)"
     echo "   8) StickC Plus SE + BLE   — 1.14\" display + buzzer          (FTDI/usbserial)"
     echo "   9) Beacon Tester (Atom Lite) — broadcasts fake Flock signals (FTDI/usbserial)"
+    echo "   10) LILYGO T-Display + BLE — classic ESP32 + display        (usbserial)"
     echo ""
     echo "   ℹ️  Options 4/5 (ESP32-S3 / Atom VoiceS3R or Echo S3R):"
     echo "      Flashing is fully automatic — no button-hold required."
@@ -478,7 +479,7 @@ while true; do
     echo "      so you can verify a SEPARATE real detector is alerting"
     echo "      correctly. See beacon_test.cpp for scenario details."
     echo ""
-    read -r -p "   Enter 1–9 (default: 1): " VARIANT
+    read -r -p "   Enter 1–10 (default: 1): " VARIANT
 
     case "$VARIANT" in
         1)
@@ -531,6 +532,11 @@ while true; do
         9)
             ENV="m5atom-lite-beacon"
             LABEL="Beacon Tester (Atom Lite, fake Flock signal broadcaster)"
+            EXPECTED_PORT_TYPE="usbserial"
+            ;;
+        10)
+            ENV="lilygo-t-display-ble"
+            LABEL="LILYGO T-Display + BLE"
             EXPECTED_PORT_TYPE="usbserial"
             ;;
         *)

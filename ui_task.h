@@ -325,6 +325,19 @@ static void uiTaskFn(void* pv) {
         }
 #endif
 
+    #if defined(USE_LILYGO_T_DISPLAY)
+        if (alertWins) {
+            tdisplayDetection(alert.method, alert.mac, alert.confidence, alert.rssi,
+                      alert.channel, alert.ssid, alert.dispType);
+        }
+        tdisplayScanning(scan.channel, scan.modeName, scan.detCount, now,
+                 scan.spiffsOk, scan.scanning);
+        {
+            int btn = tdisplayButtonTick(now);
+            if (btn == 4) uiSetButtonAction((uint8_t)btn);
+        }
+    #endif
+
 #if defined(USE_M5BASIC)
         if (alertWins) {
             m5basicDetection(alert.method, alert.mac, alert.confidence, alert.rssi,
@@ -379,6 +392,8 @@ static void uiTaskFn(void* pv) {
 static void startUiTask() {
 #if defined(USE_LILYGO_T_DISPLAY_S3)
     xTaskCreatePinnedToCore(uiTaskFn, "flock_ui", 8192, nullptr, 1, &g_uiTaskHandle, 1);
+#elif defined(USE_LILYGO_T_DISPLAY)
+    xTaskCreatePinnedToCore(uiTaskFn, "flock_ui", 4096, nullptr, 1, &g_uiTaskHandle, 1);
 #elif (defined(USE_C5_DISPLAY) && USE_C5_DISPLAY) || defined(USE_M5BASIC) || defined(USE_M5STICKC_PLUS_SE)
     xTaskCreatePinnedToCore(uiTaskFn, "flock_ui", 4096, nullptr, 1, &g_uiTaskHandle, 1);
 #endif

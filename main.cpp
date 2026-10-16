@@ -117,6 +117,11 @@ static bool fyConfigLoad() {
   #include "tdisplays3_display.h"
 #endif
 
+// LILYGO T-Display — ST7789 135×240 SPI display (LovyanGFX)
+#if defined(USE_LILYGO_T_DISPLAY)
+  #include "tdisplay_display.h"
+#endif
+
 // M5Atom LED support — GPIO27 SK6812, GPIO39 button
 //
 // M5Atom Echo has the SAME onboard SK6812 addressable RGB LED on GPIO27 as
@@ -208,6 +213,12 @@ static bool fyConfigLoad() {
   #define LED_FLASH_MS   30000  // hold red 30 s after detection
 #elif defined(USE_LILYGO_T_DISPLAY_S3)
   // LILYGO T-Display S3 — ESP32-S3R8, 170×320 ST7789 via tdisplays3_display.h.
+  // No buzzer/LED; the display is the only output.
+  #define USE_BUZZER     0
+  #define USE_LED        0
+  #define LED_FLASH_MS   0
+#elif defined(USE_LILYGO_T_DISPLAY)
+  // Classic LILYGO T-Display — ESP32, 135×240 ST7789 over SPI.
   // No buzzer/LED; the display is the only output.
   #define USE_BUZZER     0
   #define USE_LED        0
@@ -2470,6 +2481,10 @@ void setup() {
   tds3Init();
 #endif
 
+#if defined(USE_LILYGO_T_DISPLAY)
+  tdisplayInit();
+#endif
+
 #if defined(HAS_SIMPLE_BUTTON)
   // Single bare-GPIO button (Atom Lite/Echo/Voice/VoiceS3R, T-Dongle C5).
   // Safe to call even where USE_M5ATOM's block below also sets this pin.
@@ -2829,6 +2844,23 @@ void loop() {
 
 #if defined(USE_LILYGO_T_DISPLAY_S3)
   // Buttons are polled on the UI task; action 4 = top button toggles scanning.
+  if (uiTakeButtonAction() == 4) {
+    if (sniffingStopped) {
+      sniffingStopped = false;
+      if (!fyPromiscPaused) esp_wifi_set_promiscuous(true);
+      lastHop = millis();
+      Serial.println("[flockyou] scanning resumed (button)");
+    } else {
+#if defined(ENABLE_BLE_SCAN) && ENABLE_BLE_SCAN
+      if (g_pBLEScan) g_pBLEScan->stop();
+#endif
+      stopSniffing("button");
+    }
+  }
+#endif
+
+#if defined(USE_LILYGO_T_DISPLAY)
+  // GPIO35 pauses/resumes scanning; GPIO0 cycles display brightness.
   if (uiTakeButtonAction() == 4) {
     if (sniffingStopped) {
       sniffingStopped = false;

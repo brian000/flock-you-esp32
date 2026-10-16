@@ -111,6 +111,9 @@ pio run -e esp32dev -t upload && pio device monitor
 # WiFi + BLE coexistence (continuous BLE scan + WiFi simultaneously)
 pio run -e esp32dev-ble -t upload && pio device monitor
 
+# LILYGO T-Display (classic ESP32, built-in display + BLE)
+pio run -e lilygo-t-display-ble -t upload && pio device monitor
+
 # M5Atom variants — use the unified flasher script
 ./flash.sh          # interactively identifies your device
 ./flash.sh --once   # flash one device and exit
@@ -132,6 +135,8 @@ pio run -e esp32dev-ble -t upload && pio device monitor
 | `m5atom-voices3r-ble` | Atom VoiceS3R (S3) | ✅ COEX |
 | `lilygo-t-dongle-c5` | LILYGO T-Dongle C5 | — |
 | `lilygo-t-dongle-c5-ble` | LILYGO T-Dongle C5 | ✅ NimBLE 2.x |
+| `lilygo-t-display` | LILYGO T-Display (classic ESP32) | — |
+| `lilygo-t-display-ble` | LILYGO T-Display (classic ESP32) | ✅ COEX |
 
 ### 3. Test Detection
 - Device boots with Super Mario 1-2 startup tune

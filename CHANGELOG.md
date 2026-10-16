@@ -16,6 +16,12 @@ blocking calls disguised as async). A future reader should be able to tell
 
 ### Added
 
+- **LILYGO T-Display support** (`lilygo-t-display`, `lilygo-t-display-ble`):
+  classic ESP32 with a 240x135 landscape ST7789 SPI display, using LovyanGFX and
+  the existing decoupled UI task. The panel is rotated 90 degrees
+  counter-clockwise. GPIO35 pauses/resumes scanning; BOOT (GPIO0) cycles
+  backlight brightness. Static content stays on-screen while the radar region
+  refreshes at 20 Hz, avoiding full-screen redraws and a framebuffer allocation.
 - **LILYGO T-Display S3 support** (`lilygo-t-display-s3`, `lilygo-t-display-s3-ble`):
   ESP32-S3R8 with a 170x320 ST7789 on an 8-bit parallel bus, driven by LovyanGFX
   (`tdisplays3_display.h`). The display is the only output (no buzzer or LED).
