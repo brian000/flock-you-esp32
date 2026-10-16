@@ -114,6 +114,9 @@ pio run -e esp32dev-ble -t upload && pio device monitor
 # LILYGO T-Display (classic ESP32, built-in display + BLE)
 pio run -e lilygo-t-display-ble -t upload && pio device monitor
 
+# LILYGO T-Display S3 (native USB, built-in display + BLE)
+pio run -e lilygo-t-display-s3-ble -t upload && pio device monitor
+
 # M5Atom variants — use the unified flasher script
 ./flash.sh          # interactively identifies your device
 ./flash.sh --once   # flash one device and exit
@@ -137,6 +140,8 @@ pio run -e lilygo-t-display-ble -t upload && pio device monitor
 | `lilygo-t-dongle-c5-ble` | LILYGO T-Dongle C5 | ✅ NimBLE 2.x |
 | `lilygo-t-display` | LILYGO T-Display (classic ESP32) | — |
 | `lilygo-t-display-ble` | LILYGO T-Display (classic ESP32) | ✅ COEX |
+| `lilygo-t-display-s3` | LILYGO T-Display S3 | — |
+| `lilygo-t-display-s3-ble` | LILYGO T-Display S3 | ✅ COEX |
 
 ### 3. Test Detection
 - Device boots with Super Mario 1-2 startup tune
